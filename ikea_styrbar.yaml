@@ -1,0 +1,181 @@
+blueprint:
+  name: ZHA - IKEA four button remote for lights
+  description: Control lights with an IKEA four button remote (the square ones)
+  domain: automation
+  input:
+    remote:
+      name: Remote
+      description: IKEA remote to use
+      selector:
+        device:
+          integration: zha
+          manufacturer: IKEA of Sweden
+          model: Remote Control N2
+          multiple: false
+    light:
+      name: Light(s)
+      description: The light(s) to control
+      selector:
+        target:
+          entity:
+            domain: light
+    hold_time:
+      name: Hold Time
+      description: Time between the execution of the brighter/darker actions when
+        holding the brighter/darker button.
+      default: 0.5
+      selector:
+        number:
+          min: 0.1
+          max: 2.0
+          step: 0.1
+          unit_of_measurement: seconds
+          mode: slider
+    min_brightness:
+      name: Min brightness percent
+      description: Min brightness percent
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 50
+          step: 1
+          mode: slider
+    brightness_step:
+      name: Brightness step
+      description: Brightness step
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 20
+          step: 1
+          mode: slider
+    button_left_short:
+      name: Left button - short press
+      description: Action to run on short left button press
+      default: []
+      selector:
+        action: {}
+    button_left_long:
+      name: Left button - long press
+      description: Action to run on long left button press. Use with care, as before
+        the long press event is sent, the "on" event gets triggered.
+      default: []
+      selector:
+        action: {}
+    button_right_short:
+      name: Right button - short press
+      description: Action to run on short right button press
+      default: []
+      selector:
+        action: {}
+    button_right_long:
+      name: Right button - long press
+      description: Action to run on long right button press. Use with care, as before
+        the long press event is sent, the "on" event gets triggered.
+      default: []
+      selector:
+        action: {}
+mode: restart
+max_exceeded: silent
+trigger:
+- platform: event
+  event_type: zha_event
+  event_data:
+    device_id: !input remote
+action:
+- variables:
+    command: '{{ trigger.event.data.command }}'
+    cluster_id: '{{ trigger.event.data.cluster_id }}'
+    endpoint_id: '{{ trigger.event.data.endpoint_id }}'
+    args: '{{ trigger.event.data.args }}'
+    lights: !input light
+    entities: >
+      {%- set ns = namespace(ret=[]) %}
+      {%- for key in ['device', 'area', 'entity', 'label'] %}
+        {%- set items = lights.get(key ~ '_id', [])  %}
+        {%- if items %}
+          {%- set items = [ items ] if items is string else items %}
+          {%- set items = items if key == 'entity' else items | map(key ~ '_entities') | sum(start=[]) %}
+          {%- set ns.ret = ns.ret + [ items ] %}
+        {%- endif %}
+      {%- endfor %}
+      {{ ns.ret | sum(start=[]) }}
+    min_brightness: !input min_brightness
+    brightness_step: !input brightness_step
+- choose:
+  - conditions:
+    - '{{ command == ''on'' }}'
+    - '{{ cluster_id == 6 }}'
+    - '{{ endpoint_id == 1 }}'
+    sequence:
+    - service: light.turn_on
+      target: !input light
+      data:
+        transition: 1
+  - conditions:
+    - '{{ command == ''off'' }}'
+    - '{{ cluster_id == 6 }}'
+    - '{{ endpoint_id == 1 }}'
+    sequence:
+    - service: light.turn_off
+      target: !input light
+      data:
+        transition: 1
+  - conditions:
+    - '{{ command == ''move_with_on_off'' }}'
+    - '{{ cluster_id == 8 }}'
+    - '{{ endpoint_id == 1 }}'
+    sequence:
+    - repeat:
+        count: 100
+        sequence:
+        - service: light.turn_on
+          target: !input light
+          data:
+            brightness_pct: >
+              {%- set cb = (entities | map('state_attr', 'brightness') | map('float', 0) | list | min) * 100.0 / 255.0 %}
+              {{ min(100, cb + brightness_step) }}
+            transition: !input hold_time
+        - delay: !input hold_time
+  - conditions:
+    - '{{ command == ''move'' }}'
+    - '{{ cluster_id == 8 }}'
+    - '{{ endpoint_id == 1 }}'
+    sequence:
+    - repeat:
+        count: 100
+        sequence:
+        - service: light.turn_on
+          target: !input light
+          data:
+            brightness_pct: >
+              {%- set cb = (entities | map('state_attr', 'brightness') | map('float', 0) | list | min) * 100.0 / 255.0 %}
+              {{ max(min_brightness, cb - brightness_step) }}
+            transition: !input hold_time
+        - delay: !input hold_time
+  - conditions:
+    - '{{ command == ''press'' }}'
+    - '{{ cluster_id == 5 }}'
+    - '{{ endpoint_id == 1 }}'
+    - '{{ args == [257, 13, 0] }}'
+    sequence: !input button_left_short
+  - conditions:
+    - '{{ command == ''hold'' }}'
+    - '{{ cluster_id == 5 }}'
+    - '{{ endpoint_id == 1 }}'
+    - '{{ args == [3329, 0] }}'
+    sequence: !input button_left_long
+  - conditions:
+    - '{{ command == ''press'' }}'
+    - '{{ cluster_id == 5 }}'
+    - '{{ endpoint_id == 1 }}'
+    - '{{ args == [256, 13, 0] }}'
+    sequence: !input button_right_short
+  - conditions:
+    - '{{ command == ''hold'' }}'
+    - '{{ cluster_id == 5 }}'
+    - '{{ endpoint_id == 1 }}'
+    - '{{ args == [3328, 0] }}'
+    sequence: !input button_right_long
