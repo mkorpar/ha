@@ -77,7 +77,7 @@ blueprint:
       default: []
       selector:
         action: {}
-source_url: https://github.com/mkorpar/ha/blob/main/ikea_styrbar.yaml
+  source_url: https://github.com/mkorpar/ha/blob/main/ikea_styrbar.yaml
 mode: restart
 max_exceeded: silent
 trigger:
