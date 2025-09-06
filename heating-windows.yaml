@@ -9,6 +9,7 @@ blueprint:
           filter:
             - device_class: opening
               domain: binary_sensor
+        multiple: true
     trv_window_opened:
       name: TRV window opened switch
       selector:
