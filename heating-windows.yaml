@@ -8,16 +8,14 @@ blueprint:
       selector:
         entity:
           multiple: true
-          filter:
-            - device_class: opening
-              domain: binary_sensor
+          device_class: opening
+          domain: binary_sensor
     trv_window_opened:
       name: TRV window opened switch
       selector:
         entity:
           multiple: false
-          filter:
-            - domain: switch
+          domain: switch
 
 triggers:
   - trigger: state
