@@ -1,5 +1,6 @@
 blueprint:
   name: WindowOpenedToTRV
+  source_url: https://github.com/mkorpar/ha/blob/main/heating-windows.yaml
   domain: automation
   input:
     window_sensors:
