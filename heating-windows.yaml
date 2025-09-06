@@ -26,10 +26,12 @@ triggers:
 conditions: []
   
 actions:
+  - variables:
+      sensors: !input window_sensors
   - if:
       - condition: template
         value_template: >-
-          {{!input window_sensors | select('is_state', 'on') | list | length > 0}}
+          {{sensors | select('is_state', 'on') | list | length > 0}}
     then:
       - action: switch.turn_on
         metadata: {}
