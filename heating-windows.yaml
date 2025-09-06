@@ -19,8 +19,7 @@ blueprint:
 
 triggers:
   - trigger: state
-    entity_id:
-      - !input window_sensors
+    entity_id: !input window_sensors
         
 conditions: []
   
