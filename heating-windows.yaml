@@ -18,11 +18,11 @@ blueprint:
           domain: switch
 
 trigger_variables:
-  input_window_sensors: !input window_sensors
+  window_sensors: !input window_sensors
 
 triggers:
   - trigger: state
-    entity_id: input_window_sensors
+    entity_id: !input window_sensors
         
 conditions: []
   
