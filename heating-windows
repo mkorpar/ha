@@ -1,0 +1,45 @@
+blueprint:
+  name: WindowOpenedToTRV
+  domain: automation
+  input:
+    window_sensors:
+      name: Window sensors
+      selector:
+        entity:
+          filter:
+            - device_class: opening
+              domain: binary_sensor
+    trv_window_opened:
+      name: TRV window opened switch
+      selector:
+        entity:
+          filter:
+            - domain: switch
+          multiple: false
+
+triggers:
+  - trigger: state
+    entity_id:
+      - !input window_sensors
+        
+conditions: []
+  
+actions:
+  - if:
+      - condition: template
+        value_template: >-
+          {{!input window_sensors | select('is_state', 'on') | list | length > 0}}
+    then:
+      - action: switch.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id: !input trv_window_opened
+    else:
+      - action: switch.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: !input trv_window_opened
+
+mode: single
