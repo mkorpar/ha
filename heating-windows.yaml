@@ -17,33 +17,11 @@ blueprint:
           multiple: false
           domain: switch
 
-trigger_variables:
-  window_sensors: !input window_sensors
-
 triggers:
   - trigger: state
     entity_id: !input window_sensors
         
 conditions: []
   
-actions:
-  - variables:
-      sensors: !input window_sensors
-  - if:
-      - condition: template
-        value_template: >-
-          {{sensors | select('is_state', 'on') | list | length > 0}}
-    then:
-      - action: switch.turn_on
-        metadata: {}
-        data: {}
-        target:
-          entity_id: !input trv_window_opened
-    else:
-      - action: switch.turn_off
-        metadata: {}
-        data: {}
-        target:
-          entity_id: !input trv_window_opened
 
 mode: single
