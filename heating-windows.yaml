@@ -14,7 +14,7 @@ blueprint:
       name: TRV window opened switch
       selector:
         entity:
-          multiple: false
+          multiple: true
           domain: switch
         
 conditions: []
