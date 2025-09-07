@@ -1,0 +1,60 @@
+blueprint:
+  name: ExternalSensorToTRV
+  source_url: https://github.com/mkorpar/ha/blob/main/heating-external-sensor.yaml
+  domain: automation
+  input:
+    temperature_sensor:
+      name: Temperature sensors
+      selector:
+        entity:
+          multiple: false
+          device_class: temperature
+          domain: sensor
+    external_temperature_sensors_switch:
+      name: TRV external sensor enabling switch 
+      selector:
+        entity:
+          multiple: true
+          domain: switch
+    external_temperature_sensors_value:
+      name: TRV external sensor value setter
+      selector:
+        entity:
+          multiple: true
+          domain: number
+
+triggers:
+  - trigger: state
+    entity_id:
+      - !input temperature_sensor
+
+conditions: []
+
+actions:
+  - variables:
+      temperature_sensor: !input temperature_sensor
+  - if:
+      - condition: state
+        entity_id: !input temperature_sensor
+        state: unavailable
+    then:
+      - action: switch.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: !input external_temperature_sensors_switch
+    else:
+      - action: switch.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id: !input external_temperature_sensors_switch
+      - action: number.set_value
+        metadata: {}
+        data:
+          value: >-
+            {{ states(temperature_sensor) | float | round(1) }}
+        target:
+          entity_id: !input external_temperature_sensors_value
+mode: single
+
