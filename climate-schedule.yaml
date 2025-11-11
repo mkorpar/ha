@@ -46,12 +46,12 @@ actions:
         data:
           temperature: "{{ state_attr(schedule, 'temperature') }}"
         target:
-          entity_id: !input climate
+          entity_id: !input climate_input
     else:
       - action: climate.set_temperature
         metadata: {}
         data:
           temperature: 22
         target:
-          entity_id: !input climate
+          entity_id: !input climate_input
 mode: single
