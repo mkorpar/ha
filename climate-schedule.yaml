@@ -28,7 +28,11 @@ triggers:
   - trigger: state
     entity_id: !input schedule
 
-conditions: []
+conditions:
+  - variables:
+      schedule: !input schedule
+  - condition: template     
+      value_template: {{ state_attr(climate, 'hvac_action') != 'off' }}
 
 actions:
   - variables:
