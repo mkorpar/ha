@@ -3,7 +3,7 @@ blueprint:
   source_url: https://github.com/mkorpar/ha/blob/main/climate-schedule.yaml
   domain: automation
   input:
-    climate:
+    climate_input:
       name: Climate
       selector:
         entity:
@@ -30,7 +30,7 @@ triggers:
 
 conditions:
   - variables:
-      climate_input: !input climate
+      climate_input: !input climate_input
   - condition: "{{ state_attr(climate_input, 'hvac_action') != 'off' }}"
 
 actions:
