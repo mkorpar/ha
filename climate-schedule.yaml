@@ -1,0 +1,60 @@
+blueprint:
+  name: WindowOpenedToTRV
+  source_url: https://github.com/mkorpar/ha/blob/main/climate-schedule.yaml
+  domain: automation
+  input:
+    climate:
+      name: Climate
+      selector:
+        entity:
+          multiple: false
+          device_class: climate
+    schedule:
+      name: Schedule
+      selector:
+        entity:
+          multiple: false
+          device_class: schedule
+    default_temp:
+      name: Default temperature
+      default: 18
+      selector:
+        number:
+          min: 5
+          max: 25
+          unit_of_measurement: "°C"
+
+triggers:
+  - trigger: state
+    entity_id: !input schedule
+
+conditions:
+  - variables:
+      climate: !input climate
+  - condition: template
+    value_template: >-
+      {{ state_attr(climate, 'hvac_action') != 'off' }}
+
+actions:
+  - variables:
+      schedule: !input schedule
+  - if:
+      - condition: state
+        entity_id: schedule
+        state: "on"
+    then:
+      - action: climate.set_temperature
+        metadata: {}
+        data:
+          temperature: >-
+            {{ state_attr(schedule, 'temperature') }}
+        target:
+          entity_id: !input climate
+    else:
+      - action: climate.set_temperature
+        metadata: {}
+        data:
+          temperature: 22
+        target:
+          entity_id: !input climate
+mode: single
