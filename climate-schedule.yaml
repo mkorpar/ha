@@ -30,9 +30,9 @@ triggers:
 
 conditions:
   - variables:
-      schedule: !input schedule
+      climate_input: !input climate
   - condition: template     
-      value_template: {{ state_attr(climate, 'hvac_action') != 'off' }}
+      value_template: {{ state_attr(climate_input, 'hvac_action') != 'off' }}
 
 actions:
   - variables:
