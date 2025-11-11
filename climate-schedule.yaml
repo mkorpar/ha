@@ -32,7 +32,8 @@ trigger_variables:
   _climate_input: !input climate_input
 
 conditions:
-  - condition: "{{ state_attr(_climate_input, 'hvac_action') != 'off' }}"
+  - condition: template
+    value_template: "{{ state_attr(_climate_input, 'hvac_action') != 'off' }}"
 
 actions:
   - variables:
