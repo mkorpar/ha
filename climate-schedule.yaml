@@ -8,13 +8,13 @@ blueprint:
       selector:
         entity:
           multiple: false
-          device_class: climate
+          domain: climate
     schedule:
       name: Schedule
       selector:
         entity:
           multiple: false
-          device_class: schedule
+          domain: schedule
     default_temp:
       name: Default temperature
       default: 18
