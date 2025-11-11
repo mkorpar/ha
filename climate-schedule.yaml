@@ -1,5 +1,5 @@
 blueprint:
-  name: WindowOpenedToTRV
+  name: ClimateSchedule
   source_url: https://github.com/mkorpar/ha/blob/main/climate-schedule.yaml
   domain: automation
   input:
