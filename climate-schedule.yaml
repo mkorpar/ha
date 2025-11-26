@@ -38,6 +38,8 @@ conditions:
 actions:
   - variables:
       schedule: !input schedule
+      climate_input: !input climate_input
+      default_temp: !input default_temp
   - if:
       - condition: state
         entity_id: !input schedule
@@ -50,10 +52,20 @@ actions:
         target:
           entity_id: !input climate_input
     else:
-      - action: climate.set_temperature
-        metadata: {}
-        data:
-          temperature: !input default_temp
-        target:
-          entity_id: !input climate_input
+      - repeat:
+          while:
+            - condition: template
+              value_template: "{{ state_attr(climate_input, 'temperature') != default_temp  }}"
+          sequence:
+            - action: climate.set_temperature
+              metadata: {}
+              data:
+                temperature: !input default_temp
+              target:
+                entity_id: !input climate_input
+            - delay:
+              hours: 0
+              minutes: 0
+              seconds: 5
+              milliseconds: 0
 mode: single
