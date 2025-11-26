@@ -64,8 +64,8 @@ actions:
               target:
                 entity_id: !input climate_input
             - delay:
-              hours: 0
-              minutes: 0
-              seconds: 5
-              milliseconds: 0
+                hours: 0
+                minutes: 0
+                seconds: 5
+                milliseconds: 0
 mode: single
