@@ -45,7 +45,7 @@ conditions:
   - condition: state
     entity_id: !input heat_switch
     state:
-      - "off"
+      - "on"
 
 actions:
   - variables:
