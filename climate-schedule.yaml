@@ -23,6 +23,12 @@ blueprint:
           min: 5
           max: 25
           unit_of_measurement: "°C"
+    heat_switch:
+      name: Heat switch 
+      selector:
+        entity:
+          multiple: false
+          domain: input_boolean
 
 triggers:
   - trigger: state
@@ -34,6 +40,12 @@ trigger_variables:
 conditions:
   - condition: template
     value_template: "{{ state_attr(_climate_input, 'hvac_action') != 'off' }}"
+
+conditions:
+  - condition: state
+    entity_id: !input heat_switch
+    state:
+      - "off"
 
 actions:
   - variables:
