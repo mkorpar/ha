@@ -1,0 +1,115 @@
+blueprint:
+  name: Aircon Dry Mode Automation
+  description: Automatically switches the AC to dry mode based on bedroom humidity levels and cooling run time.
+  domain: automation
+  input:
+    climate_entity:
+      name: Climate Entity
+      description: The air conditioner to control.
+      selector:
+        entity:
+          filter:
+            domain: climate
+    humidity_sensor:
+      name: Humidity Sensor
+      description: The sensor monitoring the bedroom humidity.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: humidity
+
+triggers:
+  - trigger: state
+    entity_id:
+      - !input climate_entity
+      - !input humidity_sensor
+conditions:
+  - condition: state
+    entity_id: !input climate_entity
+    state:
+      - cool
+      - dry
+actions:
+  - if:
+      - condition: or
+        conditions:
+          - condition: and
+            conditions:
+              - condition: numeric_state
+                entity_id: !input humidity_sensor
+                above: 55
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity_id: !input climate_entity
+                    state:
+                      - dry
+                  - condition: and
+                    conditions:
+                      - condition: state
+                        entity_id: !input climate_entity
+                        state:
+                          - cool
+                      - condition: state
+                        entity_id: !input climate_entity
+                        state:
+                          - cooling
+                        attribute: hvac_action
+                        for:
+                          hours: 0
+                          minutes: 5
+                          seconds: 0
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: !input climate_entity
+                    state:
+                      - dry
+                    for:
+                      hours: 0
+                      minutes: 20
+                      seconds: 0
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: !input climate_entity
+                state:
+                  - dry
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: !input climate_entity
+                    state:
+                      - dry
+                    for:
+                      hours: 0
+                      minutes: 10
+                      seconds: 0
+    then:
+      - action: climate.set_hvac_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          hvac_mode: dry
+      - action: climate.set_fan_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          fan_mode: Silence
+    else:
+      - action: climate.set_hvac_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          hvac_mode: cool
+      - action: climate.set_fan_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          fan_mode: Silence
+mode: single
