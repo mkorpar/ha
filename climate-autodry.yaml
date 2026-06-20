@@ -99,6 +99,12 @@ actions:
           entity_id: !input climate_entity
         data:
           fan_mode: Silence
+      - action: climate.set_preset_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          preset_mode: eco
     else:
       - action: climate.set_hvac_mode
         metadata: {}
@@ -112,4 +118,10 @@ actions:
           entity_id: !input climate_entity
         data:
           fan_mode: Silence
+      - action: climate.set_preset_mode
+        metadata: {}
+        target:
+          entity_id: !input climate_entity
+        data:
+          preset_mode: eco
 mode: single
