@@ -31,10 +31,11 @@ conditions:
       - cool
       - dry
 actions:
-  # Capture current modes into variables before making changes
+  # Map the blueprint input to a variable so Jinja templates can read it
   - variables:
-      current_fan_mode: "{{ state_attr(climate_entity, 'fan_mode') }}"
-      current_preset_mode: "{{ state_attr(climate_entity, 'preset_mode') }}"
+      climate_entity_id: !input climate_entity
+      current_fan_mode: "{{ state_attr(climate_entity_id, 'fan_mode') }}"
+      current_preset_mode: "{{ state_attr(climate_entity_id, 'preset_mode') }}"
     
   - if:
       - condition: or
