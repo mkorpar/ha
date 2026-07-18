@@ -31,6 +31,11 @@ conditions:
       - cool
       - dry
 actions:
+  # Capture current modes into variables before making changes
+  - variables:
+      current_fan_mode: "{{ state_attr(climate_entity, 'fan_mode') }}"
+      current_preset_mode: "{{ state_attr(climate_entity, 'preset_mode') }}"
+    
   - if:
       - condition: or
         conditions:
@@ -98,13 +103,13 @@ actions:
         target:
           entity_id: !input climate_entity
         data:
-          fan_mode: Silence
+          fan_mode: "{{ current_fan_mode }}"
       - action: climate.set_preset_mode
         metadata: {}
         target:
           entity_id: !input climate_entity
         data:
-          preset_mode: eco
+          preset_mode: "{{ current_preset_mode }}"
     else:
       - action: climate.set_hvac_mode
         metadata: {}
@@ -117,11 +122,11 @@ actions:
         target:
           entity_id: !input climate_entity
         data:
-          fan_mode: Silence
+          fan_mode: "{{ current_fan_mode }}"
       - action: climate.set_preset_mode
         metadata: {}
         target:
           entity_id: !input climate_entity
         data:
-          preset_mode: eco
+          preset_mode: "{{ current_preset_mode }}"
 mode: single
