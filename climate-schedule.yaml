@@ -38,9 +38,10 @@ trigger_variables:
   _climate_input: !input climate_input
 
 conditions:
-  - condition: template
-    value_template: "{{ state_attr(_climate_input, 'hvac_action') != 'off' }}"
-
+  - condition: state
+    entity_id: !input heat_switch
+    state: "on"
+  
 actions:
   - variables:
       schedule: !input schedule
@@ -49,9 +50,6 @@ actions:
   - if:
       - condition: state
         entity_id: !input schedule
-        state: "on"
-      - condition: state
-        entity_id: !input heat_switch
         state: "on"
     then:
       - action: climate.set_temperature
