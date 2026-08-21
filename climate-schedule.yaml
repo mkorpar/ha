@@ -33,9 +33,7 @@ blueprint:
       name: Turn off instead of default temperature
       default: false
       selector:
-        entity:
-          multiple: false
-          domain: input_boolean
+        boolean: {}
 
 triggers:
   - trigger: state
