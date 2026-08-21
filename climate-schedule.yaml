@@ -38,6 +38,9 @@ blueprint:
 triggers:
   - trigger: state
     entity_id: !input schedule
+  - trigger: state
+    entity_id: !input heat_switch
+    to: "on"
 
 trigger_variables:
   _climate_input: !input climate_input
