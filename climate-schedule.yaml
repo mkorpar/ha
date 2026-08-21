@@ -24,7 +24,14 @@ blueprint:
           max: 25
           unit_of_measurement: "°C"
     heat_switch:
-      name: Heat switch 
+      name: Heat switch
+      selector:
+        entity:
+          multiple: false
+          domain: input_boolean
+    turn_off_instead:
+      name: Turn off instead of default temperature
+      default: false
       selector:
         entity:
           multiple: false
@@ -41,12 +48,14 @@ conditions:
   - condition: state
     entity_id: !input heat_switch
     state: "on"
-  
+
 actions:
   - variables:
       schedule: !input schedule
       climate_input: !input climate_input
       default_temp: !input default_temp
+      turn_off_instead: !input turn_off_instead
+
   - if:
       - condition: state
         entity_id: !input schedule
@@ -59,20 +68,29 @@ actions:
         target:
           entity_id: !input climate_input
     else:
-      - repeat:
-          while:
-            - condition: template
-              value_template: "{{ state_attr(climate_input, 'temperature') != default_temp  }}"
-          sequence:
-            - action: climate.set_temperature
-              metadata: {}
-              data:
-                temperature: !input default_temp
-              target:
-                entity_id: !input climate_input
-            - delay:
-                hours: 0
-                minutes: 1
-                seconds: 0
-                milliseconds: 0
+      - if:
+          - condition: template
+            value_template: "{{ is_state(turn_off_instead, 'on') }}"
+        then:
+          - action: climate.turn_off
+            target:
+              entity_id: !input climate_input
+        else:
+          - repeat:
+              while:
+                - condition: template
+                  value_template: "{{ state_attr(climate_input, 'temperature') != default_temp }}"
+              sequence:
+                - action: climate.set_temperature
+                  metadata: {}
+                  data:
+                    temperature: !input default_temp
+                  target:
+                    entity_id: !input climate_input
+                - delay:
+                    hours: 0
+                    minutes: 1
+                    seconds: 0
+                    milliseconds: 0
+
 mode: single
