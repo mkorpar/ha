@@ -67,19 +67,20 @@ triggers:
   - trigger: state
     entity_id: !input climate_input
     from: unknown
-  - trigger: state
-    entity_id: !input window_sensor
-    to: "on"
+  - trigger: template
+    value_template: "{{ window_sensor | default('', true) != '' and is_state(window_sensor, 'on') }}"
     for:
       minutes: 5
-  - trigger: state
-    entity_id: !input window_sensor
-    to: "off"
+    id: window_open
+  - trigger: template
+    value_template: "{{ window_sensor | default('', true) != '' and is_state(window_sensor, 'off') }}"
     for:
       minutes: 1
+    id: window_closed
 
 trigger_variables:
   _climate_input: !input climate_input
+  window_sensor: !input window_sensor
 
 conditions: []
 
