@@ -95,10 +95,10 @@ actions:
                 target:
                   entity_id: !input climate_input
           - choose:
-            - conditions:
-              - condition: template
-              value_template: "{{ before_temperature_actions | length > 0 }}"
-            sequence: !input before_temperature_actions
+              - conditions:
+                  - condition: template
+                    value_template: "{{ before_temperature_actions | length > 0 }}"
+                sequence: !input before_temperature_actions
           - action: climate.set_temperature
             metadata: {}
             data:
@@ -129,10 +129,10 @@ actions:
                     target:
                       entity_id: !input climate_input
               - choose:
-                - conditions:
-                  - condition: template
-                  value_template: "{{ before_temperature_actions | length > 0 }}"
-                sequence: !input before_temperature_actions
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ before_temperature_actions | length > 0 }}"
+                    sequence: !input before_temperature_actions
               - action: climate.set_temperature
                 metadata: {}
                 data:
