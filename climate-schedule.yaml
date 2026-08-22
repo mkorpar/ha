@@ -45,6 +45,15 @@ blueprint:
       default: []
       selector:
         action: {}
+    window_sensor:
+      name: Window contact sensor
+      description: Optional sensor that reports whether a window is open.
+      default: null
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: opening
 
 triggers:
   - trigger: state
@@ -58,6 +67,16 @@ triggers:
   - trigger: state
     entity_id: !input climate_input
     from: unknown
+  - trigger: state
+    entity_id: !input window_sensor
+    to: "on"
+    for:
+      minutes: 5
+  - trigger: state
+    entity_id: !input window_sensor
+    to: "off"
+    for:
+      minutes: 1
 
 trigger_variables:
   _climate_input: !input climate_input
@@ -73,6 +92,7 @@ actions:
       heat_switch: !input heat_switch
       always_on: !input always_on
       before_temperature_actions: !input before_temperature_actions
+      window_sensor: !input window_sensor
 
   - if:
       - condition: state
@@ -83,6 +103,8 @@ actions:
           - condition: state
             entity_id: !input schedule
             state: "on"
+          - condition: template
+            value_template: "{{ window_sensor | default('', true) == '' or not is_state(window_sensor, 'on') }}"
         then:
           - if:
               - condition: template
