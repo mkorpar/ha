@@ -17,6 +17,7 @@ blueprint:
           domain: schedule
     default_temp:
       name: Default temperature
+      description: Used when "Turn off instead of default temperature" is disabled.
       default: 18
       selector:
         number:
@@ -34,6 +35,12 @@ blueprint:
       default: false
       selector:
         boolean: {}
+    off_hvac_mode:
+      name: HVAC mode when schedule is off
+      default: null
+      selector:
+        state:
+          entity_id: !input climate_input
 
 triggers:
   - trigger: state
