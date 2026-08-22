@@ -72,6 +72,7 @@ actions:
       turn_off_instead: !input turn_off_instead
       heat_switch: !input heat_switch
       always_on: !input always_on
+      before_temperature_actions: !input before_temperature_actions
 
   - if:
       - condition: state
@@ -93,7 +94,11 @@ actions:
               - action: climate.turn_on
                 target:
                   entity_id: !input climate_input
-          - !input before_temperature_actions
+          - choose:
+            - conditions:
+              - condition: template
+              value_template: "{{ before_temperature_actions | length > 0 }}"
+            sequence: !input before_temperature_actions
           - action: climate.set_temperature
             metadata: {}
             data:
@@ -123,7 +128,11 @@ actions:
                   - action: climate.turn_on
                     target:
                       entity_id: !input climate_input
-              - !input before_temperature_actions
+              - choose:
+                - conditions:
+                  - condition: template
+                  value_template: "{{ before_temperature_actions | length > 0 }}"
+                sequence: !input before_temperature_actions
               - action: climate.set_temperature
                 metadata: {}
                 data:
