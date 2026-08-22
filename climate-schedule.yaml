@@ -52,6 +52,12 @@ triggers:
   - trigger: state
     entity_id: !input heat_switch
     id: heat_switch
+  - trigger: state
+    entity_id: !input climate_input
+    from: unavailable
+  - trigger: state
+    entity_id: !input climate_input
+    from: unknown
 
 trigger_variables:
   _climate_input: !input climate_input
