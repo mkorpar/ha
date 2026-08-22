@@ -35,18 +35,18 @@ blueprint:
       default: false
       selector:
         boolean: {}
-    off_hvac_mode:
-      name: HVAC mode when schedule is off
-      default: null
+    always_on:
+      name: Keep climate always on
+      default: false
       selector:
-        state:
-          entity_id: !input climate_input
+        boolean: {}
 
 triggers:
   - trigger: state
     entity_id: !input schedule
   - trigger: state
     entity_id: !input heat_switch
+    id: heat_switch
 
 trigger_variables:
   _climate_input: !input climate_input
@@ -60,6 +60,7 @@ actions:
       default_temp: !input default_temp
       turn_off_instead: !input turn_off_instead
       heat_switch: !input heat_switch
+      always_on: !input always_on
 
   - if:
       - condition: state
@@ -82,9 +83,13 @@ actions:
               - condition: template
                 value_template: "{{ is_state(turn_off_instead, 'on') }}"
             then:
-              - action: climate.turn_off
-                target:
-                  entity_id: !input climate_input
+              - if:
+                  - condition: template
+                    value_template: "{{ not always_on }}"
+                then:
+                  - action: climate.turn_off
+                    target:
+                      entity_id: !input climate_input
             else:
               - repeat:
                   while:
@@ -102,5 +107,15 @@ actions:
                         minutes: 1
                         seconds: 0
                         milliseconds: 0
+    else:
+      - if:
+          - condition: trigger
+            id: heat_switch
+          - condition: template
+            value_template: "{{ not always_on }}"
+        then:
+          - action: climate.turn_off
+            target:
+              entity_id: !input climate_input
 
 mode: single
