@@ -69,12 +69,12 @@ triggers:
     entity_id: !input climate_input
     from: unknown
   - trigger: template
-    value_template: "{{ expand(window_sensor | default([], true)) | select('is_state', 'on') | list | length > 0 }}"
+    value_template: "{{ expand(window_sensor | default([], true)) | selectattr('state', 'eq', 'on') | list | length > 0 }}"
     for:
       minutes: 5
     id: window_open
   - trigger: template
-    value_template: "{{ window_sensor | default([], true) | length > 0 and expand(window_sensor) | select('is_state', 'off') | list | length == window_sensor | length }}"
+    value_template: "{{ window_sensor | default([], true) | length > 0 and expand(window_sensor) | selectattr('state', 'eq', 'off') | list | length == window_sensor | length }}"
     for:
       minutes: 1
     id: window_closed
@@ -106,7 +106,7 @@ actions:
             entity_id: !input schedule
             state: "on"
           - condition: template
-            value_template: "{{ expand(window_sensor | default([], true)) | select('is_state', 'on') | list | length == 0 }}"
+            value_template: "{{ expand(window_sensor | default([], true)) | selectattr('state', 'eq', 'on') | list | length == 0 }}"
         then:
           - if:
               - condition: template
@@ -132,7 +132,7 @@ actions:
         else:
           - if:
               - condition: template
-                value_template: "{{ is_state(turn_off_instead, 'on') }}"
+                value_template: "{{ turn_off_instead }}"
             then:
               - if:
                   - condition: template
