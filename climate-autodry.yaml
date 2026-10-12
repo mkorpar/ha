@@ -24,6 +24,13 @@ triggers:
     entity_id:
       - !input climate_entity
       - !input humidity_sensor
+  - trigger: state
+    entity_id: !input climate_entity
+    attribute: hvac_action
+    to: cooling
+    for:
+      minutes: 5
+    id: cooling_for_5_minutes
 conditions:
   - condition: state
     entity_id: !input climate_entity
@@ -57,15 +64,8 @@ actions:
                         entity_id: !input climate_entity
                         state:
                           - cool
-                      - condition: state
-                        entity_id: !input climate_entity
-                        state:
-                          - cooling
-                        attribute: hvac_action
-                        for:
-                          hours: 0
-                          minutes: 5
-                          seconds: 0
+                      - condition: trigger
+                        id: cooling_for_5_minutes
               - condition: not
                 conditions:
                   - condition: state
