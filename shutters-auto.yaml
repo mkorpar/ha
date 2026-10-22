@@ -3,7 +3,8 @@ blueprint:
   description: >-
     Open a selected cover at 7:00 AM and when the selected window opens.
     Close it at sunset or 8:00 PM, whichever comes first, unless the window
-    is open. If the window closes after that time, close the cover then.
+    is open. If the window closes before 7:00 AM or after that evening
+    close time, close the cover then.
   domain: automation
   input:
     cover_entity:
@@ -41,7 +42,7 @@ triggers:
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
     id: window_open
-  # When it changes to off, check whether the scheduled close time has passed.
+  # When it changes to off, the actions close early or after the evening cutoff.
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'off') }}"
     id: window_closed
@@ -58,13 +59,14 @@ actions:
           - action: cover.open_cover
             target:
               entity_id: !input cover_entity
-      # If the window closes after sunset or 8:00 PM, close the cover now.
+      # If the window closes before 7:00 AM, or after sunset/8:00 PM, close now.
       - conditions:
           - condition: trigger
             id: window_closed
           - condition: template
             value_template: >-
-              {{ now().strftime('%H:%M:%S') >= '20:00:00'
+              {{ now().strftime('%H:%M:%S') < '07:00:00'
+                 or now().strftime('%H:%M:%S') >= '20:00:00'
                  or is_state('sun.sun', 'below_horizon') }}
         sequence:
           - action: cover.close_cover
