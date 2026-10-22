@@ -1,0 +1,41 @@
+blueprint:
+  name: Shutter schedule with sunset close
+  description: >-
+    Open a selected cover at 7:00 AM. Close it at sunset or 8:00 PM,
+    whichever occurs first.
+  domain: automation
+  input:
+    cover_entity:
+      name: Cover
+      description: The cover to open and close.
+      selector:
+        entity:
+          filter:
+            - domain: cover
+
+triggers:
+  - trigger: time
+    at: "07:00:00"
+    id: open
+  - trigger: time
+    at: "20:00:00"
+    id: close
+  - trigger: sun
+    event: sunset
+    id: close
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: open
+        sequence:
+          - action: cover.open_cover
+            target:
+              entity_id: !input cover_entity
+    default:
+      - action: cover.close_cover
+        target:
+          entity_id: !input cover_entity
+
+mode: single
