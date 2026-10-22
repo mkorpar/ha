@@ -2,9 +2,10 @@ blueprint:
   name: Shutter schedule with window protection
   description: >-
     Open a selected cover at the configured opening time and when the selected
-    window opens. Close it at sunset or the configured closing time, whichever
-    comes first, unless the window is open. If the window closes before the
-    opening time or after that evening close time, close the cover then.
+    window opens. Open it only if it is closed. Close it at sunset or the
+    configured closing time, whichever comes first, unless the window is open.
+    If the window closes before the opening time or after that evening close
+    time, close the cover then.
   domain: automation
   input:
     cover_entity:
@@ -63,12 +64,15 @@ triggers:
 
 actions:
   - choose:
-      # The configured schedule and a newly opened window both open the cover.
+      # Open for the schedule or window only if the cover is currently closed.
       - conditions:
           - condition: trigger
             id:
               - open
               - window_open
+          - condition: state
+            entity_id: !input cover_entity
+            state: "closed"
         sequence:
           - action: cover.open_cover
             target:
