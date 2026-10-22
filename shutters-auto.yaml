@@ -37,15 +37,18 @@ triggers:
   - trigger: sun
     event: sunset
     id: close
+  # When the window sensor changes to on, open the cover.
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
     id: window_open
+  # When it changes to off, check whether the scheduled close time has passed.
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'off') }}"
     id: window_closed
 
 actions:
   - choose:
+      # The 7:00 AM schedule and a newly opened window both open the cover.
       - conditions:
           - condition: trigger
             id:
@@ -55,6 +58,7 @@ actions:
           - action: cover.open_cover
             target:
               entity_id: !input cover_entity
+      # If the window closes after sunset or 8:00 PM, close the cover now.
       - conditions:
           - condition: trigger
             id: window_closed
@@ -66,6 +70,7 @@ actions:
           - action: cover.close_cover
             target:
               entity_id: !input cover_entity
+      # At sunset or 8:00 PM, close only if no window sensor is set or it is off.
       - conditions:
           - condition: trigger
             id: close
