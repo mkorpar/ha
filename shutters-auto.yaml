@@ -1,8 +1,9 @@
 blueprint:
-  name: Shutter schedule with sunset close
+  name: Shutter schedule with window protection
   description: >-
-    Open a selected cover at 7:00 AM. Close it at sunset or 8:00 PM,
-    whichever occurs first.
+    Open a selected cover at 7:00 AM and when the selected window opens.
+    Close it at sunset or 8:00 PM, whichever comes first, unless the window
+    is open. If the window closes after that time, close the cover then.
   domain: automation
   input:
     cover_entity:
@@ -12,6 +13,19 @@ blueprint:
         entity:
           filter:
             - domain: cover
+    window_entity:
+      name: Window opening sensor (optional)
+      description: >-
+        A binary sensor that is on when the window is open. Opening the window
+        opens the cover and prevents it from closing until the window is shut.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+
+trigger_variables:
+  window_entity: !input window_entity
 
 triggers:
   - trigger: time
@@ -23,19 +37,44 @@ triggers:
   - trigger: sun
     event: sunset
     id: close
+  - trigger: template
+    value_template: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
+    id: window_open
+  - trigger: template
+    value_template: "{{ window_entity != '' and is_state(window_entity, 'off') }}"
+    id: window_closed
 
 actions:
   - choose:
       - conditions:
           - condition: trigger
-            id: open
+            id:
+              - open
+              - window_open
         sequence:
           - action: cover.open_cover
             target:
               entity_id: !input cover_entity
-    default:
-      - action: cover.close_cover
-        target:
-          entity_id: !input cover_entity
+      - conditions:
+          - condition: trigger
+            id: window_closed
+          - condition: template
+            value_template: >-
+              {{ now().strftime('%H:%M:%S') >= '20:00:00'
+                 or is_state('sun.sun', 'below_horizon') }}
+        sequence:
+          - action: cover.close_cover
+            target:
+              entity_id: !input cover_entity
+      - conditions:
+          - condition: trigger
+            id: close
+          - condition: template
+            value_template: >-
+              {{ window_entity == '' or is_state(window_entity, 'off') }}
+        sequence:
+          - action: cover.close_cover
+            target:
+              entity_id: !input cover_entity
 
 mode: single
