@@ -1,10 +1,10 @@
 blueprint:
   name: Shutter schedule with window protection
   description: >-
-    Open a selected cover at 7:00 AM and when the selected window opens.
-    Close it at sunset or 8:00 PM, whichever comes first, unless the window
-    is open. If the window closes before 7:00 AM or after that evening
-    close time, close the cover then.
+    Open a selected cover at the configured opening time and when the selected
+    window opens. Close it at sunset or the configured closing time, whichever
+    comes first, unless the window is open. If the window closes before the
+    opening time or after that evening close time, close the cover then.
   domain: automation
   input:
     cover_entity:
@@ -24,16 +24,30 @@ blueprint:
         entity:
           filter:
             - domain: binary_sensor
+    opening_time:
+      name: Opening time
+      description: Time of day to open the cover.
+      default: "07:00:00"
+      selector:
+        time: {}
+    closing_time:
+      name: Closing time
+      description: Time of day to close the cover. Sunset can close it earlier.
+      default: "20:00:00"
+      selector:
+        time: {}
 
-trigger_variables:
+variables:
+  opening_time: !input opening_time
+  closing_time: !input closing_time
   window_entity: !input window_entity
 
 triggers:
   - trigger: time
-    at: "07:00:00"
+    at: !input opening_time
     id: open
   - trigger: time
-    at: "20:00:00"
+    at: !input closing_time
     id: close
   - trigger: sun
     event: sunset
@@ -49,7 +63,7 @@ triggers:
 
 actions:
   - choose:
-      # The 7:00 AM schedule and a newly opened window both open the cover.
+      # The configured schedule and a newly opened window both open the cover.
       - conditions:
           - condition: trigger
             id:
@@ -59,20 +73,20 @@ actions:
           - action: cover.open_cover
             target:
               entity_id: !input cover_entity
-      # If the window closes before 7:00 AM, or after sunset/8:00 PM, close now.
+      # If the window closes before the opening time, or after sunset/closing time, close now.
       - conditions:
           - condition: trigger
             id: window_closed
           - condition: template
             value_template: >-
-              {{ now().strftime('%H:%M:%S') < '07:00:00'
-                 or now().strftime('%H:%M:%S') >= '20:00:00'
+              {{ now().strftime('%H:%M:%S') < opening_time
+                 or now().strftime('%H:%M:%S') >= closing_time
                  or is_state('sun.sun', 'below_horizon') }}
         sequence:
           - action: cover.close_cover
             target:
               entity_id: !input cover_entity
-      # At sunset or 8:00 PM, close only if no window sensor is set or it is off.
+      # At sunset or the configured closing time, close only if no window sensor is set or it is off.
       - conditions:
           - condition: trigger
             id: close
