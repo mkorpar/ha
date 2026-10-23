@@ -76,9 +76,12 @@ actions:
       schedule: !input schedule
       climate_input: !input climate_input
       heat_switch: !input heat_switch
-      always_on: !input always_on
+      always_on_input: !input always_on
       before_temperature_actions: !input before_temperature_actions
       window_sensor: !input window_sensor
+
+  - variables:
+      always_on: "{{ always_on_input or 'off' not in (state_attr(climate_input, 'hvac_modes') or []) }}"
 
   - if:
       - condition: state
