@@ -15,26 +15,12 @@ blueprint:
         entity:
           multiple: false
           domain: schedule
-    default_temp:
-      name: Default temperature
-      description: Used when "Turn off instead of default temperature" is disabled.
-      default: 18
-      selector:
-        number:
-          min: 5
-          max: 25
-          unit_of_measurement: "°C"
     heat_switch:
       name: Heat switch
       selector:
         entity:
           multiple: false
           domain: input_boolean
-    turn_off_instead:
-      name: Turn off instead of default temperature
-      default: false
-      selector:
-        boolean: {}
     always_on:
       name: Keep climate always on
       default: false
@@ -89,8 +75,6 @@ actions:
   - variables:
       schedule: !input schedule
       climate_input: !input climate_input
-      default_temp: !input default_temp
-      turn_off_instead: !input turn_off_instead
       heat_switch: !input heat_switch
       always_on: !input always_on
       before_temperature_actions: !input before_temperature_actions
@@ -132,35 +116,9 @@ actions:
         else:
           - if:
               - condition: template
-                value_template: "{{ turn_off_instead }}"
+                value_template: "{{ not always_on }}"
             then:
-              - if:
-                  - condition: template
-                    value_template: "{{ not always_on }}"
-                then:
-                  - action: climate.turn_off
-                    target:
-                      entity_id: !input climate_input
-            else:
-              - if:
-                  - condition: template
-                    value_template: "{{ not always_on }}"
-                  - condition: state
-                    entity_id: !input climate_input
-                    state: "off"
-                then:
-                  - action: climate.turn_on
-                    target:
-                      entity_id: !input climate_input
-              - choose:
-                  - conditions:
-                      - condition: template
-                        value_template: "{{ before_temperature_actions | length > 0 }}"
-                    sequence: !input before_temperature_actions
-              - action: climate.set_temperature
-                metadata: {}
-                data:
-                  temperature: !input default_temp
+              - action: climate.turn_off
                 target:
                   entity_id: !input climate_input
     else:
