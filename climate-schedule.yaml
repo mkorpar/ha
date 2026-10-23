@@ -21,11 +21,6 @@ blueprint:
         entity:
           multiple: false
           domain: input_boolean
-    always_on:
-      name: Keep climate always on
-      default: false
-      selector:
-        boolean: {}
     before_temperature_actions:
       name: Actions before setting temperature
       default: []
@@ -76,12 +71,11 @@ actions:
       schedule: !input schedule
       climate_input: !input climate_input
       heat_switch: !input heat_switch
-      always_on_input: !input always_on
       before_temperature_actions: !input before_temperature_actions
       window_sensor: !input window_sensor
 
   - variables:
-      always_on: "{{ always_on_input or 'off' not in (state_attr(climate_input, 'hvac_modes') or []) }}"
+      always_on: "{{ 'off' not in (state_attr(climate_input, 'hvac_modes') or []) }}"
 
   - if:
       - condition: state
