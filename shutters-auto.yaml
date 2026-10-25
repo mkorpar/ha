@@ -8,7 +8,8 @@ blueprint:
     When the window closes, apply the current schedule or sunset override.
     Full-open commands are sent only when the cover is closed.
     Partial positions require a cover that supports setting its position.
-    Optional start and end dates restrict all actions to an inclusive date range.
+    Optional date ranges restrict all actions to dates within any listed range.
+    Each range is inclusive. An empty list allows all dates.
   domain: automation
   homeassistant:
     min_version: "2024.10.0"
@@ -40,25 +41,28 @@ blueprint:
           filter:
             - domain: binary_sensor
 
-    start_date:
-      name: Start date (optional)
-      description: First active date, inclusive. Leave empty for no lower limit.
-      default: ""
+    active_date_ranges:
+      name: Active date ranges (optional)
+      description: |-
+        Enter a YAML list of date ranges. All boundaries are inclusive.
+        The automation runs when today matches any range. An empty list
+        ([]) allows all dates. Omit start or end for an unlimited boundary.
+        Dates must use YYYY-MM-DD. Example:
+        ```yaml
+        - start: "2026-01-01"
+          end: "2026-03-31"
+        - start: "2026-10-01"
+          end: "2026-12-31"
+        ```
+      default: []
       selector:
-        date: {}
-    end_date:
-      name: End date (optional)
-      description: Last active date, inclusive. Leave empty for no upper limit.
-      default: ""
-      selector:
-        date: {}
+        object: {}
 
 trigger_variables:
   window_entity: !input window_entity
 
 variables:
-  start_date: !input start_date
-  end_date: !input end_date
+  active_date_ranges: !input active_date_ranges
   cover_entity: !input cover_entity
   schedule_entity: !input schedule_entity
   window_entity: !input window_entity
@@ -92,12 +96,29 @@ triggers:
     id: window_closed
 
 actions:
-  # Check at execution time so queued runs cannot act outside the date range.
+  # Evaluate all ranges when each queued run executes; any matching range allows it.
   - condition: template
     value_template: >-
-      {% set today = now().date().isoformat() %}
-      {{ (not start_date or today >= (start_date | string))
-         and (not end_date or today <= (end_date | string)) }}
+      {% set today = now().date() %}
+      {% set ns = namespace(active=false) %}
+      {% if active_date_ranges is sequence
+            and active_date_ranges is not string
+            and active_date_ranges is not mapping %}
+        {% if active_date_ranges | length == 0 %}
+          {% set ns.active = true %}
+        {% endif %}
+        {% for period in active_date_ranges if period is mapping %}
+          {% set start = period.get('start') %}
+          {% set end = period.get('end') %}
+          {% set parsed_start = strptime(start | string, '%Y-%m-%d', none) if start else none %}
+          {% set parsed_end = strptime(end | string, '%Y-%m-%d', none) if end else none %}
+          {% if (not start or (parsed_start is not none and today >= parsed_start.date()))
+                and (not end or (parsed_end is not none and today <= parsed_end.date())) %}
+            {% set ns.active = true %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {{ ns.active }}
   - choose:
       # Window protection takes priority while the window is open.
       - conditions: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
