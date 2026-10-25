@@ -8,6 +8,7 @@ blueprint:
     When the window closes, apply the current schedule or sunset override.
     Full-open commands are sent only when the cover is closed.
     Partial positions require a cover that supports setting its position.
+    Optional start and end dates restrict all actions to an inclusive date range.
   domain: automation
   homeassistant:
     min_version: "2024.10.0"
@@ -39,15 +40,34 @@ blueprint:
           filter:
             - domain: binary_sensor
 
+    start_date:
+      name: Start date (optional)
+      description: First active date, inclusive. Leave empty for no lower limit.
+      default: ""
+      selector:
+        date: {}
+    end_date:
+      name: End date (optional)
+      description: Last active date, inclusive. Leave empty for no upper limit.
+      default: ""
+      selector:
+        date: {}
+
 trigger_variables:
   window_entity: !input window_entity
 
 variables:
+  start_date: !input start_date
+  end_date: !input end_date
   cover_entity: !input cover_entity
   schedule_entity: !input schedule_entity
   window_entity: !input window_entity
 
 triggers:
+  # Apply the current target when a new local date begins.
+  - trigger: time
+    at: "00:00:00"
+    id: date_changed
   # Include attribute changes so touching blocks with different pct_open work.
   - trigger: state
     entity_id: !input schedule_entity
@@ -72,6 +92,12 @@ triggers:
     id: window_closed
 
 actions:
+  # Check at execution time so queued runs cannot act outside the date range.
+  - condition: template
+    value_template: >-
+      {% set today = now().date().isoformat() %}
+      {{ (not start_date or today >= (start_date | string))
+         and (not end_date or today <= (end_date | string)) }}
   - choose:
       # Window protection takes priority while the window is open.
       - conditions: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
