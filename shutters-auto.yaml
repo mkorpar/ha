@@ -16,10 +16,11 @@ blueprint:
   input:
     killswitch:
       name: Automation enabled
-      description: Enable shutter control when true. When false, all shutter actions are skipped.
-      default: true
+      description: Select an input_boolean helper. On enables shutter control; off blocks all shutter actions.
       selector:
-        boolean: {}
+        entity:
+          filter:
+            - domain: input_boolean
     cover_entity:
       name: Cover
       description: The cover to open, close, and position.
@@ -70,13 +71,17 @@ trigger_variables:
   window_entity: !input window_entity
 
 variables:
-  killswitch: !input killswitch
   active_date_ranges: !input active_date_ranges
   cover_entity: !input cover_entity
   schedule_entity: !input schedule_entity
   window_entity: !input window_entity
 
 triggers:
+  # Apply the current target immediately when shutter control is enabled.
+  - trigger: state
+    entity_id: !input killswitch
+    to: "on"
+    id: enabled
   # Apply the current target when a new local date begins.
   - trigger: time
     at: "00:00:00"
@@ -105,9 +110,11 @@ triggers:
     id: window_closed
 
 actions:
-  # A false killswitch blocks every action, including window and sunset handling.
-  - condition: template
-    value_template: "{{ killswitch | bool }}"
+  # Read the helper's current state when each queued run begins.
+  # Off, unknown, or unavailable blocks window, sunset, and schedule actions.
+  - condition: state
+    entity_id: !input killswitch
+    state: "on"
   # Evaluate all ranges when each queued run executes; any matching range allows it.
   - condition: template
     value_template: >-
