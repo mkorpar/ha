@@ -14,6 +14,12 @@ blueprint:
   homeassistant:
     min_version: "2024.10.0"
   input:
+    killswitch:
+      name: Automation enabled
+      description: Enable shutter control when true. When false, all shutter actions are skipped.
+      default: true
+      selector:
+        boolean: {}
     cover_entity:
       name: Cover
       description: The cover to open, close, and position.
@@ -64,6 +70,7 @@ trigger_variables:
   window_entity: !input window_entity
 
 variables:
+  killswitch: !input killswitch
   active_date_ranges: !input active_date_ranges
   cover_entity: !input cover_entity
   schedule_entity: !input schedule_entity
@@ -98,6 +105,9 @@ triggers:
     id: window_closed
 
 actions:
+  # A false killswitch blocks every action, including window and sunset handling.
+  - condition: template
+    value_template: "{{ killswitch | bool }}"
   # Evaluate all ranges when each queued run executes; any matching range allows it.
   - condition: template
     value_template: >-
