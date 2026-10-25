@@ -1,105 +1,132 @@
 blueprint:
   name: Shutter schedule with window protection
   description: >-
-    Open a selected cover at the configured opening time and when the selected
-    window opens. Open it only if it is closed. Close it at sunset or the
-    configured closing time, whichever comes first, unless the window is open.
-    If the window closes before the opening time or after that evening close
-    time, close the cover then.
+    Follow a Schedule helper's pct_open additional data (0 = closed,
+    100 = fully open). An inactive schedule, or a missing/invalid pct_open,
+    means fully open. Sunset overrides the schedule until sunrise.
+    An open window prevents closing or repositioning and opens a closed cover.
+    When the window closes, apply the current schedule or sunset override.
+    Full-open commands are sent only when the cover is closed.
+    Partial positions require a cover that supports setting its position.
   domain: automation
+  homeassistant:
+    min_version: "2024.10.0"
   input:
     cover_entity:
       name: Cover
-      description: The cover to open and close.
+      description: The cover to open, close, and position.
       selector:
         entity:
           filter:
             - domain: cover
+    schedule_entity:
+      name: Shutter schedule
+      description: >-
+        Select a Schedule helper. Set pct_open from 0 to 100 in each block's
+        Additional data. Outside active blocks, the target is fully open.
+      selector:
+        entity:
+          filter:
+            - domain: schedule
     window_entity:
       name: Window opening sensor (optional)
       description: >-
-        A binary sensor that is on when the window is open. Opening the window
-        opens the cover and prevents it from closing until the window is shut.
+        A binary sensor that is on when the window is open. An open window
+        opens a closed cover and prevents closing or repositioning until shut.
       default: ""
       selector:
         entity:
           filter:
             - domain: binary_sensor
-    opening_time:
-      name: Opening time
-      description: Time of day to open the cover.
-      default: "07:00:00"
-      selector:
-        time: {}
-    closing_time:
-      name: Closing time
-      description: Time of day to close the cover. Sunset can close it earlier.
-      default: "20:00:00"
-      selector:
-        time: {}
+
+trigger_variables:
+  window_entity: !input window_entity
 
 variables:
-  opening_time: !input opening_time
-  closing_time: !input closing_time
+  cover_entity: !input cover_entity
+  schedule_entity: !input schedule_entity
   window_entity: !input window_entity
 
 triggers:
-  - trigger: time
-    at: !input opening_time
-    id: open
-  - trigger: time
-    at: !input closing_time
-    id: close
+  # Include attribute changes so touching blocks with different pct_open work.
+  - trigger: state
+    entity_id: !input schedule_entity
+    id: schedule_changed
   - trigger: sun
     event: sunset
-    id: close
-  # When the window sensor changes to on, open the cover.
+    id: sunset
+  # Resume the schedule when the overnight sunset override ends.
+  - trigger: sun
+    event: sunrise
+    id: sunrise
+  - trigger: homeassistant
+    event: start
+    id: startup
+  # Opening the window opens the cover only if it is currently closed.
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
     id: window_open
-  # When it changes to off, the actions close early or after the evening cutoff.
+  # Closing the window reapplies the current schedule or sunset override.
   - trigger: template
     value_template: "{{ window_entity != '' and is_state(window_entity, 'off') }}"
     id: window_closed
 
 actions:
   - choose:
-      # Open for the schedule or window only if the cover is currently closed.
-      - conditions:
-          - condition: trigger
-            id:
-              - open
-              - window_open
+      # Window protection takes priority while the window is open.
+      - conditions: "{{ window_entity != '' and is_state(window_entity, 'on') }}"
+        sequence:
           - condition: state
             entity_id: !input cover_entity
             state: "closed"
-        sequence:
           - action: cover.open_cover
             target:
               entity_id: !input cover_entity
-      # If the window closes before the opening time, or after sunset/closing time, close now.
-      - conditions:
-          - condition: trigger
-            id: window_closed
-          - condition: template
-            value_template: >-
-              {{ now().strftime('%H:%M:%S') < opening_time
-                 or now().strftime('%H:%M:%S') >= closing_time
-                 or is_state('sun.sun', 'below_horizon') }}
-        sequence:
-          - action: cover.close_cover
+    default:
+      # A configured sensor must report closed before positioning the cover.
+      - condition: template
+        value_template: "{{ window_entity == '' or is_state(window_entity, 'off') }}"
+      # Wait for valid sun/schedule data rather than treating unavailable as off.
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'sunset'
+             or (trigger.id == 'sunrise' and states(schedule_entity) in ['on', 'off'])
+             or is_state('sun.sun', 'below_horizon')
+             or (is_state('sun.sun', 'above_horizon')
+                 and states(schedule_entity) in ['on', 'off']) }}
+      - variables:
+          target_position: >-
+            {% if trigger.id == 'sunset' or
+                  (trigger.id != 'sunrise' and is_state('sun.sun', 'below_horizon')) %}
+              0
+            {% elif is_state(schedule_entity, 'on') %}
+              {% set pct = state_attr(schedule_entity, 'pct_open') | float(100) %}
+              {{ ([0, ([pct, 100] | min)] | max) | round(0) | int }}
+            {% else %}
+              100
+            {% endif %}
+      - choose:
+          - conditions: "{{ target_position | int == 0 }}"
+            sequence:
+              - action: cover.close_cover
+                target:
+                  entity_id: !input cover_entity
+          # Preserve the existing closed-only check for full opening.
+          - conditions: "{{ target_position | int == 100 }}"
+            sequence:
+              - condition: state
+                entity_id: !input cover_entity
+                state: "closed"
+              - action: cover.open_cover
+                target:
+                  entity_id: !input cover_entity
+        default:
+          # Intermediate schedule values set the requested partial position.
+          - action: cover.set_cover_position
             target:
               entity_id: !input cover_entity
-      # At sunset or the configured closing time, close only if no window sensor is set or it is off.
-      - conditions:
-          - condition: trigger
-            id: close
-          - condition: template
-            value_template: >-
-              {{ window_entity == '' or is_state(window_entity, 'off') }}
-        sequence:
-          - action: cover.close_cover
-            target:
-              entity_id: !input cover_entity
+            data:
+              position: "{{ target_position | int }}"
 
-mode: single
+mode: queued
+max: 10
