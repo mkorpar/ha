@@ -9,7 +9,7 @@ blueprint:
     Full-open commands are sent only when the cover is closed.
     Partial positions require a cover that supports setting its position.
     Optional date ranges restrict all actions to dates within any listed range.
-    Each range is inclusive. An empty list allows all dates.
+    Each range repeats yearly and is inclusive. An empty list allows all dates.
   domain: automation
   homeassistant:
     min_version: "2024.10.0"
@@ -44,15 +44,17 @@ blueprint:
     active_date_ranges:
       name: Active date ranges (optional)
       description: |-
-        Enter a YAML list of date ranges. All boundaries are inclusive.
-        The automation runs when today matches any range. An empty list
-        ([]) allows all dates. Omit start or end for an unlimited boundary.
-        Dates must use YYYY-MM-DD. Example:
+        Enter a YAML list of yearly date ranges using quoted MM-DD values.
+        Boundaries are inclusive. The automation runs if any range matches.
+        A range with start later than end crosses New Year.
+        An empty list ([]) allows all dates. Omit start for January 1 or
+        end for December 31. February 29 matches only in leap years.
+        Example:
         ```yaml
-        - start: "2026-01-01"
-          end: "2026-03-31"
-        - start: "2026-10-01"
-          end: "2026-12-31"
+        - start: "01-01"
+          end: "03-31"
+        - start: "10-01"
+          end: "12-31"
         ```
       default: []
       selector:
@@ -99,7 +101,7 @@ actions:
   # Evaluate all ranges when each queued run executes; any matching range allows it.
   - condition: template
     value_template: >-
-      {% set today = now().date() %}
+      {% set today = now().strftime('%m-%d') %}
       {% set ns = namespace(active=false) %}
       {% if active_date_ranges is sequence
             and active_date_ranges is not string
@@ -108,13 +110,18 @@ actions:
           {% set ns.active = true %}
         {% endif %}
         {% for period in active_date_ranges if period is mapping %}
-          {% set start = period.get('start') %}
-          {% set end = period.get('end') %}
-          {% set parsed_start = strptime(start | string, '%Y-%m-%d', none) if start else none %}
-          {% set parsed_end = strptime(end | string, '%Y-%m-%d', none) if end else none %}
-          {% if (not start or (parsed_start is not none and today >= parsed_start.date()))
-                and (not end or (parsed_end is not none and today <= parsed_end.date())) %}
-            {% set ns.active = true %}
+          {% set start = period.get('start') or '01-01' %}
+          {% set end = period.get('end') or '12-31' %}
+          {# Validate against a leap year so February 29 is a valid boundary. #}
+          {% set parsed_start = strptime('2000-' ~ (start | string), '%Y-%m-%d', none) %}
+          {% set parsed_end = strptime('2000-' ~ (end | string), '%Y-%m-%d', none) %}
+          {% if parsed_start is not none and parsed_end is not none %}
+            {% set first = parsed_start.strftime('%m-%d') %}
+            {% set last = parsed_end.strftime('%m-%d') %}
+            {% if (first <= last and first <= today <= last)
+                  or (first > last and (today >= first or today <= last)) %}
+              {% set ns.active = true %}
+            {% endif %}
           {% endif %}
         {% endfor %}
       {% endif %}
