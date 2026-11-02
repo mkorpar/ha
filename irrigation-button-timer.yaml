@@ -4,7 +4,7 @@ blueprint:
     Start irrigation when an input button helper is pressed. The irrigation
     switch turns off after the configured duration, or the run ends early if
     the switch is turned off manually. Additional presses while running are
-    ignored.
+    ignored without logging an error.
   domain: automation
   input:
     start_button:
@@ -27,6 +27,7 @@ blueprint:
         duration:
 
 mode: single
+max_exceeded: silent
 
 trigger:
   - platform: state
