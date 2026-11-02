@@ -26,6 +26,9 @@ sequence:
   - action: switch.turn_on
     target:
       entity_id: "{{ irrigation_switch }}"
+  - wait_template: "{{ is_state(irrigation_switch, 'on') }}"
+    timeout: "00:00:10"
+    continue_on_timeout: false
   - wait_template: "{{ is_state(irrigation_switch, 'off') }}"
     timeout: "{{ run_duration }}"
     continue_on_timeout: true
