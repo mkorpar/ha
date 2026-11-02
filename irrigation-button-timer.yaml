@@ -1,18 +1,11 @@
 blueprint:
-  name: Irrigation - button with timed run
+  name: Irrigation - timed run
   description: >-
-    Start irrigation when an input button helper is pressed. The irrigation
-    switch turns off after the configured duration, or the run ends early if
-    the switch is turned off manually. Additional presses while running are
-    ignored without logging an error.
+    Start irrigation manually from Home Assistant. The irrigation switch turns
+    off after the configured duration, or the run ends early if the switch is
+    turned off manually. Additional runs while active are ignored silently.
   domain: automation
   input:
-    start_button:
-      name: Start button
-      description: Input button helper that starts irrigation when pressed.
-      selector:
-        entity:
-          domain: input_button
     irrigation_switch:
       name: Irrigation switch
       selector:
@@ -29,9 +22,7 @@ blueprint:
 mode: single
 max_exceeded: silent
 
-trigger:
-  - platform: state
-    entity_id: !input start_button
+trigger: []
 
 variables:
   irrigation_switch: !input irrigation_switch
