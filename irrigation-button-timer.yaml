@@ -1,37 +1,37 @@
-blueprint:
-  name: Irrigation - timed run
-  description: >-
-    Start irrigation manually from Home Assistant. The irrigation switch turns
-    off after the configured duration, or the run ends early if the switch is
-    turned off manually. Additional runs while active are ignored silently.
-  domain: script
-  input:
-    irrigation_switch:
-      name: Irrigation switch
-      selector:
-        entity:
-          domain: switch
-    run_duration:
-      name: Run duration
-      description: Maximum time to leave irrigation on.
-      default:
-        minutes: 10
-      selector:
-        duration:
-
+alias: Irrigation - timed run
+description: >-
+  Run the selected irrigation switch for the chosen duration, or stop early if
+  the switch is turned off manually.
 mode: single
 max_exceeded: silent
 
+fields:
+  irrigation_switch:
+    name: Irrigation switch
+    description: Switch that controls irrigation.
+    required: true
+    selector:
+      entity:
+        domain: switch
+  run_duration:
+    name: Run duration
+    description: Maximum time to leave irrigation on.
+    required: true
+    default:
+      minutes: 10
+    selector:
+      duration: {}
+
 variables:
-  irrigation_switch: !input irrigation_switch
+  irrigation_switch: "{{ irrigation_switch }}"
 
 sequence:
-  - service: switch.turn_on
+  - action: switch.turn_on
     target:
-      entity_id: !input irrigation_switch
+      entity_id: "{{ irrigation_switch }}"
   - wait_template: "{{ is_state(irrigation_switch, 'off') }}"
-    timeout: !input run_duration
+    timeout: "{{ run_duration }}"
     continue_on_timeout: true
-  - service: switch.turn_off
+  - action: switch.turn_off
     target:
-      entity_id: !input irrigation_switch
+      entity_id: "{{ irrigation_switch }}"
