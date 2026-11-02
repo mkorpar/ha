@@ -2,7 +2,8 @@ blueprint:
   name: Irrigation - button with timed run
   description: >-
     Start irrigation when an input button helper is pressed. The irrigation
-    switch turns off after the configured duration.
+    switch turns off after the configured duration, or the run ends early if
+    the switch is turned off manually.
   domain: automation
   input:
     start_button:
@@ -18,7 +19,7 @@ blueprint:
           domain: switch
     run_duration:
       name: Run duration
-      description: How long to leave irrigation on.
+      description: Maximum time to leave irrigation on.
       default:
         minutes: 10
       selector:
@@ -30,11 +31,16 @@ trigger:
   - platform: state
     entity_id: !input start_button
 
+variables:
+  irrigation_switch: !input irrigation_switch
+
 action:
   - service: switch.turn_on
     target:
       entity_id: !input irrigation_switch
-  - delay: !input run_duration
+  - wait_template: "{{ is_state(irrigation_switch, 'off') }}"
+    timeout: !input run_duration
+    continue_on_timeout: true
   - service: switch.turn_off
     target:
       entity_id: !input irrigation_switch
