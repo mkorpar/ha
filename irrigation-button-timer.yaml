@@ -1,0 +1,40 @@
+blueprint:
+  name: Irrigation - button with timed run
+  description: >-
+    Start irrigation when an input button helper is pressed. The irrigation
+    switch turns off after the configured duration.
+  domain: automation
+  input:
+    start_button:
+      name: Start button
+      description: Input button helper that starts irrigation when pressed.
+      selector:
+        entity:
+          domain: input_button
+    irrigation_switch:
+      name: Irrigation switch
+      selector:
+        entity:
+          domain: switch
+    run_duration:
+      name: Run duration
+      description: How long to leave irrigation on.
+      default:
+        minutes: 10
+      selector:
+        duration:
+
+mode: restart
+
+trigger:
+  - platform: state
+    entity_id: !input start_button
+
+action:
+  - service: switch.turn_on
+    target:
+      entity_id: !input irrigation_switch
+  - delay: !input run_duration
+  - service: switch.turn_off
+    target:
+      entity_id: !input irrigation_switch
