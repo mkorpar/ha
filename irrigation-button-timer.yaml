@@ -4,7 +4,7 @@ blueprint:
     Start irrigation manually from Home Assistant. The irrigation switch turns
     off after the configured duration, or the run ends early if the switch is
     turned off manually. Additional runs while active are ignored silently.
-  domain: automation
+  domain: script
   input:
     irrigation_switch:
       name: Irrigation switch
@@ -22,12 +22,10 @@ blueprint:
 mode: single
 max_exceeded: silent
 
-trigger: []
-
 variables:
   irrigation_switch: !input irrigation_switch
 
-action:
+sequence:
   - service: switch.turn_on
     target:
       entity_id: !input irrigation_switch
