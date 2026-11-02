@@ -22,9 +22,6 @@ fields:
     selector:
       duration: {}
 
-variables:
-  irrigation_switch: "{{ irrigation_switch }}"
-
 sequence:
   - action: switch.turn_on
     target:
