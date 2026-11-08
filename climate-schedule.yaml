@@ -36,6 +36,20 @@ blueprint:
           filter:
             - domain: binary_sensor
               device_class: opening
+    window_open_time:
+      name: Window open duration
+      description: How long a window must remain open before turning off climate control.
+      default:
+        minutes: 5
+      selector:
+        duration: {}
+    window_closed_time:
+      name: Window closed duration
+      description: How long all windows must remain closed before resuming climate control.
+      default:
+        minutes: 1
+      selector:
+        duration: {}
 
 triggers:
   - trigger: state
@@ -51,13 +65,11 @@ triggers:
     from: unknown
   - trigger: template
     value_template: "{{ expand(window_sensor | default([], true)) | selectattr('state', 'eq', 'on') | list | length > 0 }}"
-    for:
-      minutes: 5
+    for: !input window_open_time
     id: window_open
   - trigger: template
     value_template: "{{ window_sensor | default([], true) | length > 0 and expand(window_sensor) | selectattr('state', 'eq', 'off') | list | length == window_sensor | length }}"
-    for:
-      minutes: 1
+    for: !input window_closed_time
     id: window_closed
 
 trigger_variables:
