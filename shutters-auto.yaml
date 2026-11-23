@@ -3,7 +3,10 @@ blueprint:
   description: >-
     Follow a Schedule helper's pct_open additional data (0 = closed,
     100 = fully open). An inactive schedule, or a missing/invalid pct_open,
-    means fully open. Sunset overrides the schedule until sunrise.
+    means fully open during the day. At sunset the cover closes for the night.
+    Before sunrise, an active schedule block takes priority over the overnight
+    closure. The overnight fallback ends at sunrise or 07:00 local time,
+    whichever comes first.
     An open window prevents closing or repositioning and opens a closed cover.
     When the window closes, apply the current schedule or sunset override.
     Full-open commands are sent only when the cover is closed.
@@ -32,7 +35,7 @@ blueprint:
       name: Shutter schedule
       description: >-
         Select a Schedule helper. Set pct_open from 0 to 100 in each block's
-        Additional data. Outside active blocks, the target is fully open.
+        Additional data. Outside active blocks, the daytime target is fully open.
       selector:
         entity:
           filter:
@@ -93,10 +96,13 @@ triggers:
   - trigger: sun
     event: sunset
     id: sunset
-  # Resume the schedule when the overnight sunset override ends.
+  # End the overnight fallback at sunrise or 07:00 local time.
   - trigger: sun
     event: sunrise
     id: sunrise
+  - trigger: time
+    at: "07:00:00"
+    id: sunrise_deadline
   - trigger: homeassistant
     event: start
     id: startup
@@ -157,25 +163,33 @@ actions:
       # A configured sensor must report closed before positioning the cover.
       - condition: template
         value_template: "{{ window_entity == '' or is_state(window_entity, 'off') }}"
-      # Wait for valid sun/schedule data rather than treating unavailable as off.
-      - condition: template
-        value_template: >-
-          {{ trigger.id == 'sunset'
-             or (trigger.id == 'sunrise' and states(schedule_entity) in ['on', 'off'])
-             or is_state('sun.sun', 'below_horizon')
-             or (is_state('sun.sun', 'above_horizon')
-                 and states(schedule_entity) in ['on', 'off']) }}
       - variables:
           target_position: >-
-            {% if trigger.id == 'sunset' or
-                  (trigger.id != 'sunrise' and is_state('sun.sun', 'below_horizon')) %}
+            {% set event = trigger.id | default('') if trigger is defined else '' %}
+            {% set sun_state = states('sun.sun') %}
+            {% set schedule_state = states(schedule_entity) %}
+            {% set local_now = now() %}
+            {% set next_sunrise = as_datetime(state_attr('sun.sun', 'next_rising'), none) %}
+            {# Below the horizon with a sunrise later today means morning. #}
+            {% set before_sunrise = next_sunrise is not none
+                 and as_local(next_sunrise).date() == local_now.date() %}
+            {% if event == 'sunset' %}
               0
-            {% elif is_state(schedule_entity, 'on') %}
-              {% set pct = state_attr(schedule_entity, 'pct_open') | float(100) %}
-              {{ ([0, ([pct, 100] | min)] | max) | round(0) | int }}
-            {% else %}
-              100
+            {% elif sun_state == 'below_horizon' and event != 'sunrise'
+                  and (not before_sunrise
+                       or (schedule_state != 'on' and local_now < today_at('07:00'))) %}
+              0
+            {% elif sun_state in ['above_horizon', 'below_horizon'] or event == 'sunrise' %}
+              {% if schedule_state == 'on' %}
+                {% set pct = state_attr(schedule_entity, 'pct_open') | float(100) %}
+                {{ ([0, ([pct, 100] | min)] | max) | round(0) | int }}
+              {% elif schedule_state == 'off' %}
+                100
+              {% endif %}
             {% endif %}
+      # Skip positioning if the inputs needed for the current target are unavailable.
+      - condition: template
+        value_template: "{{ target_position | int(-1) >= 0 }}"
       - choose:
           - conditions: "{{ target_position | int == 0 }}"
             sequence:
